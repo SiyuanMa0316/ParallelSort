@@ -44,7 +44,6 @@ int main(){
                             array[i]=array[i+1];
                             array[i+1]=temp;
                         }
-                        printf("%d threads recruited.",omp_get_num_threads());
                     }
                 }
                 else{
