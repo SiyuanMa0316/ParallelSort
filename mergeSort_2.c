@@ -55,7 +55,7 @@ void mergeSort_recursive(int* array, int start, int end, int* temp){
 void mergeSort_parallel_recursive(int* array, int start, int end, int* temp){
     if(start>=end) return;
     int mid=start+(end-start)/2;
-    if(end-start>=1024){
+    if(end-start>=(1<<12)){
         //printf("1");
         #pragma omp task
         mergeSort_parallel_recursive(array, start, mid, temp);
@@ -85,30 +85,36 @@ int main(int argc, char* argv[]) {
         return 0;
     }
     
-    int iteration = 10;
+    
     int threadNum = atoi(argv[2]);
     int arrayLen = atoi(argv[1]);
-    int* array=(int*)malloc(arrayLen*iteration*sizeof(int));
-    int* temp=(int*)malloc(arrayLen*iteration*sizeof(int));
+    int iteration = arrayLen<=(1<<15)?100:10;
+    int* array=(int*)malloc(arrayLen*sizeof(int));
+    int* temp=(int*)malloc(arrayLen*sizeof(int));
 
-    srand(time(0));
-    for(int i=0; i < arrayLen*iteration; i++) {
-        array[i]=(rand()%1000);
-    }
+    
     // printf("random array:\n");
     // for(int i=0; i < arrayLen; i++) {
     //     printf("%d ", array[i]);
     // }
     // printf("\n");
-    double t1= omp_get_wtime();
+    
+    double timeTotal=0;
     for(int currIter=0; currIter<iteration; currIter++){
+        srand(time(0));
+        for(int i=0; i < arrayLen; i++) {
+            array[i]=(rand()%1000);
+        }
+        double t1= omp_get_wtime();
         if(threadNum==0)
-            mergeSort_recursive(array, currIter*arrayLen, currIter*arrayLen + arrayLen-1, temp);
+            mergeSort_recursive(array, 0, arrayLen-1, temp);
         else
-            mergeSort_parallel(array, currIter*arrayLen, currIter*arrayLen + arrayLen-1, threadNum, temp);
+            mergeSort_parallel(array, 0, arrayLen-1, threadNum, temp);
+        double t2= omp_get_wtime();
+        timeTotal=timeTotal+t2-t1;
     }
 
-    double t2= omp_get_wtime();
+    
 
     // printf("sorted array:\n");
     // for(int i=0; i < arrayLen; i++) {
@@ -117,12 +123,12 @@ int main(int argc, char* argv[]) {
     // printf("\n");
     int passed=1;
     for(int currIter=0; currIter<iteration; currIter++){
-        if(testSorted(array + currIter*arrayLen, arrayLen)==0) passed=0;
+        if(testSorted(array, arrayLen)==0) passed=0;
     }
     if(passed) printf("test passed!\n");
     else printf("test NOT passed!\n");
 
-    printf("time=%f\n", (t2-t1)/iteration);
+    printf("time = %f\n", timeTotal/iteration);
 
 
     return 0;
